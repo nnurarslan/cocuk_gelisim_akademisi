@@ -1,6 +1,8 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QMessageBox, QLineEdit
 from login import Ui_Form_login
+from system_info import SystemWindow
+from connect_db import ConnectDatabase
 
 
 class LoginWindow(QWidget):
@@ -12,6 +14,7 @@ class LoginWindow(QWidget):
         self.username = None
         self.ui_login = None
         self.init_ui()
+        self.db = ConnectDatabase()
 
     def init_ui(self):
         self.ui_login = Ui_Form_login()
@@ -25,8 +28,13 @@ class LoginWindow(QWidget):
         self.show_password_checkbox.stateChanged.connect(self.toggle_pwd_visibility)
 
     def login(self):
-        if self.username.text() == 'admin' and self.password.text() == '123':
-            QMessageBox.information(self, 'Başarılı', 'Giriş Başarılı')
+        user = self.username.text()
+        pwd = self.password.text()
+
+        user = self.db.login({'username': user, 'password': pwd})
+        if user:
+            w_login.hide()
+            w_info.show()
         else:
             QMessageBox.information(self, 'Başarısız', 'Giriş Başarısız')
 
@@ -41,5 +49,6 @@ class LoginWindow(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     w_login = LoginWindow()
+    w_info = SystemWindow()
     w_login.show()
     app.exec()
