@@ -1,6 +1,8 @@
-from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox, QTableWidgetItem
+from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox, QTableWidgetItem, QStyleFactory
 from system_window import Ui_Form
 from connect_db import ConnectDatabase
+from PyQt6.QtGui import QIntValidator
+from PyQt6.QtCore import QDate, QDateTime
 
 
 class SystemWindow(QWidget):
@@ -10,6 +12,7 @@ class SystemWindow(QWidget):
         self.ui.setupUi(self)
         self.db = ConnectDatabase()
         self.student_id = self.ui.lineEdit_no
+        self.student_id.setValidator(QIntValidator())
         self.first_name = self.ui.lineEdit_isim
         self.last_name = self.ui.lineEdit_soyisim
         self.email_address = self.ui.lineEdit_eposta
@@ -18,8 +21,16 @@ class SystemWindow(QWidget):
         self.tel1 = self.ui.lineEdit_tel1
         self.tel2 = self.ui.lineEdit_tel2
         self.birth_date = self.ui.dateEdit
-        self.adres = self.ui.textEdit_adres
+        # self.birth_date.setDisplayFormat('dd/MM/yyyy')
+        self.birth_date.setDate(QDate.currentDate())
+        self.birth_date.setStyle(QStyleFactory.create("Fusion"))
+        self.birth_date.setStyleSheet("QDateEdit { background-color: lightblue; color: darkblue; }")
+        # Access the QCalendarWidget associated with QDateEdit
+        calendar_widget = self.birth_date.calendarWidget()
+        # Set a custom style for the QCalendarWidget (popup)
+        calendar_widget.setStyleSheet("QWidget#qt_calendar_calendarview { background-color: lightblue; }")
 
+        self.adres = self.ui.textEdit_adres
         self.add_btn = self.ui.pushButton_ekle
         self.update_btn = self.ui.pushButton_guncelle
         self.select_btn = self.ui.pushButton_sec
@@ -58,6 +69,7 @@ class SystemWindow(QWidget):
             try:
                 add_result = self.db.add_info(student_info)
                 print("Kayıt başarıyla eklendi.")
+
             except Exception as e:
                 QMessageBox.information(self, "Warning", f"Add fail: {add_result}, Please try again.",
                                         QMessageBox.StandardButton.Ok)
@@ -70,16 +82,83 @@ class SystemWindow(QWidget):
         self.enable_buttons()
 
     def update_info(self):
-        pass
+        new_student_info = self.get_student_info()
+
+        if new_student_info['student_id']:
+            update_result = self.db.update_info(new_student_info)
+            print(update_result)
+            if not update_result:
+                QMessageBox.information(self,"Uyarı","Tekrar deneyin",QMessageBox.StandardButton.Ok)
+            else:
+                self.search_info()
+        else:
+            QMessageBox.information((self, "Uyari", "Öğrenci seçiniz", QMessageBox.StandardButton.Ok))
 
     def delete_info(self):
-        pass
+        # Function to delete student information
+        select_row = self.result_table.currentRow()
+        if select_row != -1:
+            selected_option = QMessageBox.warning(self, "Dikkat!", "Silmek istediğinize emin misiniz?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
+            print(selected_option)
+            if selected_option == QMessageBox.StandardButton.Yes:
+                student_id = self.result_table.item(select_row,0).text().strip()
+                delete_result = self.db.delete_info(student_id)
+                if delete_result:
+                    self.search_info()
+                else:
+                    QMessageBox.information(self, "Uyarı", "Lütfen tekrar deneyin", QMessageBox.StandardButton.Ok)
+        else:
+            pass
 
     def select_info(self):
-        pass
+        # Function to select and populate student information in the form
+        select_row = self.result_table.currentRow()
+        print(select_row)
+        if select_row != -1:
+            self.student_id.setEnabled(False)
+            student_id = self.result_table.item(select_row,0).text().strip()
+            first_name = self.result_table.item(select_row,1).text().strip()
+            last_name = self.result_table.item(select_row,2).text().strip()
+            parent_name = self.result_table.item(select_row,3).text().strip()
+            closeness = self.result_table.item(select_row,4).text().strip()
+            bdate = self.result_table.item(select_row,5).text().strip()
+            tel1 = self.result_table.item(select_row,6).text().strip()
+            tel2 = self.result_table.item(select_row,7).text().strip()
+            email = self.result_table.item(select_row,8).text().strip()
+            adress = self.result_table.item(select_row,9).text().strip()
+
+            print(adress)
+
+            self.student_id.setText(student_id)
+            self.first_name.setText(first_name)
+            self.last_name.setText(last_name)
+            self.parent_name.setText(parent_name)
+            self.closeness.setText(closeness)
+            #self.birth_date.setText(bdate)
+            self.tel1.setText(tel1)
+            self.tel2.setText(tel2)
+            self.email_address.setText(email)
+            self.adres.setText(adress)
+            print(bdate)
+            datetime_obj = QDateTime.fromString(bdate,"dd-MM-yyyyTHH:mm:ssZ")
+            print(datetime_obj.date())
+            self.birth_date.setDate(datetime_obj.date())
+
+        else:
+            QMessageBox.information(self,"Uyarı!","Lütfen bir satır seçiniz",QMessageBox.StandardButton.Ok)
 
     def clear_info(self):
-        pass
+        # Function to clear the form
+        self.student_id.setEnabled(True)
+        self.student_id.clear()
+        self.email_address.clear()
+        self.first_name.clear()
+        self.last_name.clear()
+        self.closeness.clear()
+        self.adres.clear()
+        self.parent_name.clear()
+        self.tel1.clear()
+        self.tel2.clear()
 
     def search_info(self):
         student_info = self.get_student_info()
@@ -110,7 +189,7 @@ class SystemWindow(QWidget):
         day = birth_date.day()
         month = birth_date.month()
         year = birth_date.year()
-        iso_date = f"{year:04d}-{month:02d}-{day:02d}T00:00:00Z"
+        iso_date = f"{day:02d}-{month:02d}-{year:04d}T00:00:00Z"
 
         student_info = {
             "student_id": student_id,
